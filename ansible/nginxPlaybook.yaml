@@ -1,0 +1,50 @@
+---
+- name: installation nginx
+  hosts: nginx-web
+  become: yes
+
+  tasks:
+    - name: update
+      apt:
+        force_apt_get: true
+        upgrade: dist
+        update_cache: yes
+      become: true
+
+    - name: install nginx
+      apt:
+        name: nginx
+        state: latest
+        update_cache: yes
+
+- name:  copy nginx1.html
+  hosts: nginx-1_server
+  become: yes
+
+  tasks:
+    - name: copy index_new1.html
+      ansible.builtin.copy:
+        src: /home/vboxuser/DipSSS/ansible/nginx1.html
+        dest: /var/www/html/index.html
+        owner: root
+        group: sudo
+        mode: "0644"
+
+- name:  copy nginx2.html
+  hosts: nginx-2_server
+  become: yes
+
+  tasks:
+    - name: copy index_new2.html
+      ansible.builtin.copy:
+        src: /home/vboxuser/DipSSS/ansible/nginx2.html
+        dest: /var/www/html/index.html
+        owner: root
+        group: sudo
+        mode: "0644"
+
+  handlers:
+    - name: reload nginx
+      systemd:
+        name: nginx
+        state: reloaded

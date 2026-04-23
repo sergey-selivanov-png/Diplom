@@ -1,0 +1,39 @@
+---
+- name: Install Kibana
+  hosts: kibana_server
+  become: yes
+  vars:
+    elastic_httphost: 10.0.2.3:9200
+  tasks:
+
+  - name: Update apt cache
+    apt:
+      update_cache: yes
+
+  - name: Install Kibana package
+    apt:
+      deb: "https://mirror.yandex.ru/mirrors/elastic/7/pool/main/k/kibana/kibana-7.17.1-amd64.deb"
+    when: ansible_pkg_mgr == 'apt'
+
+  - name: Copy Kibana configuration file
+    template:
+      src: /home/vboxuser/DipSSS/ansible/kibana.j2
+      dest: /etc/kibana/kibana.yml
+    notify:
+      - Restart Kibana
+
+  - name: Reload systemd daemon
+    systemd:
+      daemon_reload: true
+
+  - name: Ensure Kibana service is started and enabled
+    service:
+      name: kibana
+      state: restarted
+      enabled: yes
+
+  handlers:
+  - name: Restart Kibana
+    service:
+      name: kibana
+      state: restarted

@@ -1,0 +1,48 @@
+---
+- name: Install Zabbix Agent on nginx-web group
+  hosts: nginx-web
+  become: true
+  vars:
+    zabbix_server: 10.0.1.5
+
+  tasks:
+    - name: Install zabbix-agent package
+      apt:
+        name: zabbix-agent
+        state: present
+
+    - name: Ensure log directory exists with correct permissions
+      file:
+        path: /var/log/zabbix/
+        state: directory
+        owner: zabbix
+        group: zabbix
+        mode: '0755'
+
+    - name: Configure Zabbix Server IP
+      lineinfile:
+        path: /etc/zabbix/zabbix_agentd.conf
+        regexp: '^Server='
+        line: "Server={{ zabbix_server }}"
+      notify: restart zabbix-agent
+
+    - name: Configure LogFile path
+      lineinfile:
+        path: /etc/zabbix/zabbix_agentd.conf
+        regexp: '^LogFile='
+        line: "LogFile=/var/log/zabbix/zabbix_agentd.log"
+      notify: restart zabbix-agent
+
+    - name: Configure Hostname
+      lineinfile:
+        path: /etc/zabbix/zabbix_agentd.conf
+        regexp: '^Hostname='
+        line: "Hostname={{ inventory_hostname }}"
+      notify: restart zabbix-agent
+
+  handlers:
+    - name: restart zabbix-agent
+      service:
+        name: zabbix-agent
+        state: restarted
+        enabled: yes

@@ -1,0 +1,32 @@
+---
+- name: Install Elasticsearch
+  hosts: elastic_server
+  become: yes
+  gather_facts: true
+
+  tasks:
+    - name: Install Java dependencies
+      apt:
+        name: openjdk-11-jdk
+        state: present
+        update_cache: yes
+
+    - name: Install Elasticsearch package
+      apt:
+        deb: "https://mirror.yandex.ru/mirrors/elastic/7/pool/main/e/elasticsearch/elasticsearch-7.17.1-amd64.deb"
+        state: present
+
+    - name: Copy Elasticsearch configuration file
+      copy:
+        src: /home/vboxuser/DipSSS/ansible/elasticsearch-conf.yaml
+        dest: /etc/elasticsearch/elasticsearch.yml
+        owner: elasticsearch
+        group: elasticsearch
+        mode: '0644'
+
+    - name: Restart and enable Elasticsearch service
+      systemd:
+        name: elasticsearch
+        state: restarted
+        enabled: yes
+        daemon_reload: yes

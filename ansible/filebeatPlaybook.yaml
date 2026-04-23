@@ -1,0 +1,27 @@
+---
+- name: Install Filebeat
+  hosts: nginx-web
+  become: yes
+  gather_facts: true
+  vars:
+    kibana_host: 10.0.1.6:5601
+    elastic_host: 10.0.2.3:9200
+  tasks:
+  - name: Install Filebeat package
+    apt:
+      deb: "https://mirror.yandex.ru/mirrors/elastic/7/pool/main/f/filebeat/filebeat-7.17.1-amd64.deb"
+
+  - name: Copy Filebeat configuration file
+    template:
+      src: /home/vboxuser/DipSSS/ansible/filebeat.j2
+      dest: /etc/filebeat/filebeat.yml
+
+  - name: Reload systemd daemon
+    systemd:
+      daemon_reload: true
+
+  - name: Restart Filebeat and enable it on boot
+    service:
+      name: filebeat
+      state: restarted
+      enabled: yes

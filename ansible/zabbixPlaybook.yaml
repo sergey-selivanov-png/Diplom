@@ -1,0 +1,85 @@
+---
+- name: Install and Configure Zabbix
+  hosts: zabbix
+  become: true
+  vars:
+    pass_zabbixdb: "zabbix"
+
+  tasks:
+    - name: Download Zabbix repository package
+      get_url:
+        url: https://repo.zabbix.com/zabbix/7.0/ubuntu/pool/main/z/zabbix-release/zabbix-release_latest_7.0+ubuntu22.04_all.deb
+        dest: /tmp/zabbix-release_latest_7.0+ubuntu22.04_all.deb
+
+    - name: Install Zabbix repository
+      apt:
+        deb: /tmp/zabbix-release_latest_7.0+ubuntu22.04_all.deb
+
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+
+    - name: Install Zabbix components and dependencies
+      apt:
+        name:
+          - apache2
+          - postgresql
+          - postgresql-contrib
+          - python3-pexpect
+          - python3-pip
+          - python3-dev
+          - python3-venv
+          - python3-psycopg2
+          - zabbix-server-pgsql
+          - zabbix-frontend-php
+          - php-pgsql
+          - zabbix-apache-conf
+          - zabbix-sql-scripts
+          - zabbix-agent
+        state: present
+
+    - name: Create PostgreSQL user for Zabbix
+      ansible.builtin.expect:
+        command: sudo -u postgres createuser --pwprompt zabbix
+        responses:
+          (?i).*(Enter password for new role)(.*):
+           - "{{ pass_zabbixdb }}"
+          (?i).*(Enter it again)(.*):
+           - "{{ pass_zabbixdb }}"
+
+    - name: Create PostgreSQL database for Zabbix
+      command: sudo -u postgres createdb -O zabbix zabbix
+      register: db_creation
+      failed_when:
+        - db_creation.rc != 0
+        - '"already exists" not in db_creation.stderr'
+
+    - name: Import initial Zabbix database schema and data
+      shell: zcat /usr/share/zabbix-sql-scripts/postgresql/server.sql.gz | sudo -u zabbix psql zabbix
+
+    - name: Configure DBPassword in Zabbix server configuration
+      lineinfile:
+        path: /etc/zabbix/zabbix_server.conf
+        regexp: '^# DBPassword='
+        line: "DBPassword={{ pass_zabbixdb }}"
+
+    - name: Enable Zabbix configuration in Apache
+      command: a2enconf zabbix
+      notify: Restart Apache
+
+    - name: Ensure Zabbix and database services are started and enabled
+      service:
+        name: "{{ item }}"
+        state: restarted
+        enabled: yes
+      loop:
+        - zabbix-server
+        - zabbix-agent
+        - apache2
+        - postgresql
+
+  handlers:
+    - name: Restart Apache
+      service:
+        name: apache2
+        state: restarted
