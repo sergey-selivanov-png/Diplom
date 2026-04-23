@@ -311,6 +311,8 @@ Application load balancer
 
 ### 1) nginx
 
+![18](https://github.com/sergey-selivanov-png/Diplom/blob/main/image/nginxPlaybook.png)
+
 ### 2) zabbix
 
 ![17](https://github.com/sergey-selivanov-png/Diplom/blob/main/image/zabbix.png)
